@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox
 import sqlite3
 from docxtpl import DocxTemplate
 import datetime
@@ -576,6 +576,10 @@ def launch_main_app():
             # Generate invoice number
             invoice_number = f"INV-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
             
+            # Format customer name for filename (remove special characters)
+            customer_name = f"{first_name}_{last_name}"
+            customer_name = "".join(c for c in customer_name if c.isalnum() or c == '_')
+            
             # Calculate totals
             subtotal = sum(item[3] for item in invoice_list)
             tax_rate = float(tax_rate_entry.get() or 0) / 100
@@ -632,18 +636,134 @@ def launch_main_app():
                 "date": datetime.datetime.now().strftime("%Y-%m-%d")
             })
             
-            # Save document
-            doc_name = f"invoice_{invoice_number}.docx"
+            # Save document with new naming format
+            doc_name = f"INV_{invoice_number}_{customer_name}.docx"
             doc.save(doc_name)
             
             # Update display
             update_invoice_display()
             
-            messagebox.showinfo("Success", f"Invoice {invoice_number} has been generated and saved.")
+            messagebox.showinfo("Success", f"Invoice {invoice_number} has been generated and saved as {doc_name}")
             new_invoice()
             
         except ValueError as e:
             messagebox.showerror("Validation Error", str(e))
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {str(e)}")
+
+    def view_invoice_details(event):
+        """Display invoice details in a new window when double-clicking an invoice"""
+        try:
+            # Get selected item
+            selected_item = search_tree.selection()
+            if not selected_item:
+                return
+                
+            # Get invoice number from selected item
+            invoice_number = search_tree.item(selected_item[0])['values'][0]
+            
+            # Connect to database
+            conn = sqlite3.connect("admin_accounts.db")
+            cursor = conn.cursor()
+            
+            # Get invoice details
+            cursor.execute("""
+                SELECT i.invoice_number, i.customer_name, i.customer_email, i.customer_phone,
+                       i.date_created, i.total_amount
+                FROM invoices i
+                WHERE i.invoice_number = ?
+            """, (invoice_number,))
+            
+            invoice_data = cursor.fetchone()
+            if not invoice_data:
+                messagebox.showerror("Error", "Invoice not found")
+                return
+            
+            # Get invoice items
+            cursor.execute("""
+                SELECT description, quantity, unit_price, total_price
+                FROM invoice_items
+                WHERE invoice_id = (SELECT id FROM invoices WHERE invoice_number = ?)
+                ORDER BY id
+            """, (invoice_number,))
+            
+            items = cursor.fetchall()
+            conn.close()
+            
+            # Create new window for invoice details
+            details_window = ctk.CTkToplevel(main_window)
+            details_window.title(f"Invoice Details - {invoice_number}")
+            details_window.geometry("800x600")
+            
+            # Main frame
+            main_frame = ctk.CTkFrame(details_window)
+            main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            
+            # Header frame
+            header_frame = ctk.CTkFrame(main_frame)
+            header_frame.pack(fill="x", padx=10, pady=10)
+            
+            # Invoice details
+            ctk.CTkLabel(header_frame, text=f"Invoice Number: {invoice_data[0]}", 
+                        font=('Aptos Black', 16)).pack(pady=5)
+            ctk.CTkLabel(header_frame, text=f"Customer: {invoice_data[1]}", 
+                        font=('Aptos Black', 14)).pack(pady=2)
+            ctk.CTkLabel(header_frame, text=f"Email: {invoice_data[2]}", 
+                        font=('Aptos Black', 14)).pack(pady=2)
+            ctk.CTkLabel(header_frame, text=f"Phone: {invoice_data[3]}", 
+                        font=('Aptos Black', 14)).pack(pady=2)
+            ctk.CTkLabel(header_frame, text=f"Date: {invoice_data[4]}", 
+                        font=('Aptos Black', 14)).pack(pady=2)
+            ctk.CTkLabel(header_frame, text=f"Total Amount: ${invoice_data[5]:.2f}", 
+                        font=('Aptos Black', 14)).pack(pady=2)
+            
+            # Items frame
+            items_frame = ctk.CTkFrame(main_frame)
+            items_frame.pack(fill="both", expand=True, padx=10, pady=10)
+            
+            # Create treeview for items
+            columns = ('description', 'quantity', 'price', 'total')
+            items_tree = ttk.Treeview(items_frame, columns=columns, show="headings", height=10)
+            
+            # Configure columns
+            items_tree.heading('description', text='Description', anchor='w')
+            items_tree.heading('quantity', text='Quantity', anchor='center')
+            items_tree.heading('price', text='Unit Price', anchor='e')
+            items_tree.heading('total', text='Total', anchor='e')
+            
+            items_tree.column('description', width=400, anchor='w')
+            items_tree.column('quantity', width=100, anchor='center')
+            items_tree.column('price', width=150, anchor='e')
+            items_tree.column('total', width=150, anchor='e')
+            
+            # Add scrollbars
+            v_scrollbar = ttk.Scrollbar(items_frame, orient="vertical", command=items_tree.yview)
+            h_scrollbar = ttk.Scrollbar(items_frame, orient="horizontal", command=items_tree.xview)
+            items_tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+            
+            # Pack tree and scrollbars
+            items_tree.pack(side="left", fill="both", expand=True)
+            v_scrollbar.pack(side="right", fill="y")
+            h_scrollbar.pack(side="bottom", fill="x")
+            
+            # Add items to treeview
+            for item in items:
+                items_tree.insert('', 'end', values=(
+                    item[0],  # description
+                    item[1],  # quantity
+                    f"${item[2]:.2f}",  # unit price
+                    f"${item[3]:.2f}"   # total
+                ))
+            
+            # Total amount frame
+            total_frame = ctk.CTkFrame(main_frame)
+            total_frame.pack(fill="x", padx=10, pady=10)
+            
+            ctk.CTkLabel(total_frame, text=f"Total Amount: ${invoice_data[5]:.2f}", 
+                        font=('Aptos Black', 16)).pack(side="right", padx=10)
+            
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", f"Error viewing invoice: {str(e)}")
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
@@ -698,9 +818,13 @@ def launch_main_app():
     tax_rate_entry.insert(0, "0")
     tax_rate_entry.pack(pady=5)
     
-    # Items Frame
-    items_frame = ctk.CTkFrame(new_invoice_tab)
-    items_frame.pack(padx=20, pady=20, fill="x")
+    # Create a container frame for items and buttons
+    container_frame = ctk.CTkFrame(new_invoice_tab)
+    container_frame.pack(padx=20, pady=20, fill="both", expand=True)
+    
+    # Items Frame - now inside container_frame with limited expand
+    items_frame = ctk.CTkFrame(container_frame)
+    items_frame.pack(padx=0, pady=(0, 10), fill="both", expand=True)
     
     ctk.CTkLabel(items_frame, text="Invoice Items", font=('Aptos Black', 16)).pack(pady=10)
     
@@ -733,7 +857,7 @@ def launch_main_app():
     tree_frame.pack(fill="both", expand=True, pady=10)
 
     columns = ('qty', 'desc', 'price', 'total')
-    tree = ttk.Treeview(tree_frame, columns=columns, show="headings")
+    tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=10)
     
     # Configure column headings and widths
     tree.heading('qty', text='Qty', anchor='center')
@@ -770,9 +894,9 @@ def launch_main_app():
     total_label = ctk.CTkLabel(totals_frame, text="Total: $0.00")
     total_label.pack(side="left", padx=10)
     
-    # Buttons Frame
-    buttons_frame = ctk.CTkFrame(new_invoice_tab)
-    buttons_frame.pack(padx=20, pady=20, fill="x")
+    # Buttons Frame - now inside container_frame
+    buttons_frame = ctk.CTkFrame(container_frame)
+    buttons_frame.pack(fill="x", pady=(0, 5))
     
     ctk.CTkButton(buttons_frame, text="Generate Invoice", command=generate_invoice).pack(side="left", padx=5)
     ctk.CTkButton(buttons_frame, text="New Invoice", command=new_invoice).pack(side="left", padx=5)
@@ -790,6 +914,32 @@ def launch_main_app():
     search_entry = ctk.CTkEntry(search_section, placeholder_text="Search by customer name", width=300)
     search_entry.pack(side="left", padx=10)
     search_entry.bind('<Return>', lambda event: search_invoices())
+    
+    def clear_invoice_history():
+        if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete all invoice history? This cannot be undone."):
+            try:
+                conn = sqlite3.connect("admin_accounts.db")
+                cursor = conn.cursor()
+                
+                # Delete from invoice_items first due to foreign key constraint
+                cursor.execute("DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices)")
+                cursor.execute("DELETE FROM invoices")
+                
+                conn.commit()
+                conn.close()
+                
+                # Refresh the display
+                update_invoice_display()
+                messagebox.showinfo("Success", "Invoice history has been cleared.")
+            except sqlite3.Error as e:
+                messagebox.showerror("Database Error", f"Error clearing history: {str(e)}")
+    
+    # Add Clear History button
+    clear_history_button = ctk.CTkButton(search_section, text="Clear History", 
+                                       command=clear_invoice_history,
+                                       fg_color="red", 
+                                       hover_color="#AA0000")
+    clear_history_button.pack(side="right", padx=10)
     
     # Results Section with Label
     results_frame = ctk.CTkFrame(search_frame)
@@ -830,6 +980,9 @@ def launch_main_app():
     # Configure row colors
     search_tree.tag_configure('oddrow', background='#f0f0f0')
     search_tree.tag_configure('evenrow', background='#ffffff')
+
+    # Bind double-click event to search tree
+    search_tree.bind('<Double-1>', view_invoice_details)
 
     # Items Management Tab
     items_frame = ctk.CTkFrame(items_tab)
