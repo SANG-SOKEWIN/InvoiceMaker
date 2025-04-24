@@ -489,6 +489,7 @@ def launch_main_app():
         tax_rate = float(tax_rate_entry.get() or 0) / 100
         tax = round(subtotal * tax_rate, 2)
         total = round(subtotal + tax, 2)
+    
         
         subtotal_label.configure(text=f"Subtotal: ${subtotal:.2f}")
         tax_label.configure(text=f"Tax: ${tax:.2f}")
@@ -582,6 +583,7 @@ def launch_main_app():
             
             # Calculate totals
             subtotal = sum(item[3] for item in invoice_list)
+            taxratepdf = tax_rate_entry.get()
             tax_rate = float(tax_rate_entry.get() or 0) / 100
             tax = round(subtotal * tax_rate, 2)
             total = round(subtotal + tax, 2)
@@ -632,6 +634,7 @@ def launch_main_app():
                 "invoice_list": invoice_list,
                 "subtotal": subtotal,
                 "tax": tax,
+                "tax_rate": taxratepdf,
                 "total": total,
                 "date": datetime.datetime.now().strftime("%Y-%m-%d")
             })
