@@ -86,21 +86,44 @@ def validate_email(email: str) -> bool:
 
 def apply_azure_theme(window):
     # Configure customtkinter appearance
-    ctk.set_appearance_mode("light")  # Other options: "dark", "system"
-    ctk.set_default_color_theme("blue")  # Other options: "dark-blue", "green"
+    ctk.set_appearance_mode("dark")  # Set to dark mode for modern look
+    ctk.set_default_color_theme("blue")  # Use blue theme
     
     # Configure ttk style for treeview
     style = ttk.Style(window)
     style.configure("Treeview",
-                   background="#ffffff",
-                   foreground="black",
-                   rowheight=25,
-                   fieldbackground="#ffffff")
+                   background="#2b2b2b",
+                   foreground="white",
+                   rowheight=30,
+                   fieldbackground="#2b2b2b",
+                   borderwidth=0)
     style.configure("Treeview.Heading",
-                   background="#f0f0f0",
-                   foreground="black",
-                   font=('Aptos Black', 10, 'bold'))
-    style.map('Treeview', background=[('selected', '#0078D7')])
+                   background="#1e1e1e",
+                   foreground="white",
+                   font=('Aptos Black', 10, 'bold'),
+                   borderwidth=0)
+    style.map('Treeview', 
+              background=[('selected', '#0078D7')],
+              foreground=[('selected', 'white')])
+    
+    # Configure alternating row colors
+    style.map('Treeview',
+              background=[('selected', '#0078D7'),
+                         ('alternate', '#2b2b2b')],
+              foreground=[('selected', 'white'),
+                         ('!selected', 'white')])
+    
+    # Configure custom styles for better visual hierarchy
+    style.configure("Custom.TFrame",
+                   background="#1e1e1e")
+    style.configure("Custom.TLabel",
+                   background="#1e1e1e",
+                   foreground="white",
+                   font=('Aptos', 10))
+    style.configure("Custom.TButton",
+                   background="#0078D7",
+                   foreground="white",
+                   font=('Aptos', 10, 'bold'))
 
 # --- Database Setup ---
 def setup_database():
@@ -151,6 +174,22 @@ def setup_database():
             )
         """)
         
+        # Add new columns for tax information if they don't exist
+        try:
+            cursor.execute("ALTER TABLE invoices ADD COLUMN tax_rate REAL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+            
+        try:
+            cursor.execute("ALTER TABLE invoices ADD COLUMN tax_amount REAL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+            
+        try:
+            cursor.execute("ALTER TABLE invoices ADD COLUMN subtotal REAL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        
         # Create invoice_items table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS invoice_items (
@@ -177,27 +216,86 @@ setup_database()
 def load_login_form():
     clear_window(login_window)
     
-    # Create main frame for login
-    login_frame = ctk.CTkFrame(login_window)
+    # Create main frame for login with gradient background
+    login_frame = ctk.CTkFrame(login_window, fg_color="transparent")
     login_frame.pack(pady=50, padx=50, fill="both", expand=True)
     
-    # Add login form elements
-    ctk.CTkLabel(login_frame, text="Admin Login", font=('Aptos Black', 25)).pack(pady=(20, 30))
-    ctk.CTkLabel(login_frame, text="Username", font=('Aptos Black', 20)).pack(pady=10)
+    # Add logo or title at the top
+    title_frame = ctk.CTkFrame(login_frame, fg_color="transparent")
+    title_frame.pack(pady=(20, 30))
     
-    global login_username_entry, login_password_entry
-    login_username_entry = ctk.CTkEntry(login_frame, width=200, font=('Aptos Black', 20))
+    ctk.CTkLabel(title_frame, 
+                text="Invoice Generator", 
+                font=('Aptos Black', 32),
+                text_color="#0078D7").pack()
+    ctk.CTkLabel(title_frame, 
+                text="Admin Portal", 
+                font=('Aptos', 16),
+                text_color="#ffffff").pack(pady=5)
+    
+    # Create form container with modern styling
+    form_container = ctk.CTkFrame(login_frame, 
+                                fg_color="#2b2b2b",
+                                corner_radius=15)
+    form_container.pack(pady=20, padx=20, fill="x")
+    
+    # Add form elements with modern styling
+    ctk.CTkLabel(form_container, 
+                text="Username", 
+                font=('Aptos', 14),
+                text_color="#ffffff").pack(pady=(20, 5))
+    
+    global login_username_entry
+    login_username_entry = ctk.CTkEntry(form_container, 
+                                      width=300,
+                                      height=40,
+                                      font=('Aptos', 14),
+                                      corner_radius=10,
+                                      placeholder_text="Enter your username")
     login_username_entry.pack(pady=5)
 
-    ctk.CTkLabel(login_frame, text="Password", font=('Aptos Black', 20)).pack(pady=10)
-    login_password_entry = ctk.CTkEntry(login_frame, show="*", width=200, font=('Aptos Black', 20))
+    ctk.CTkLabel(form_container, 
+                text="Password", 
+                font=('Aptos', 14),
+                text_color="#ffffff").pack(pady=(20, 5))
+    
+    global login_password_entry
+    login_password_entry = ctk.CTkEntry(form_container, 
+                                      show="*",
+                                      width=300,
+                                      height=40,
+                                      font=('Aptos', 14),
+                                      corner_radius=10,
+                                      placeholder_text="Enter your password")
     login_password_entry.pack(pady=5)   
 
     # Add buttons with modern styling
-    ctk.CTkButton(login_frame, text="Login", font=('Aptos Black', 14), 
-                 command=login, width=120, height=32).pack(pady=10)
-    ctk.CTkButton(login_frame, text="Register", font=('Aptos Black', 14), 
-                 command=register, width=120, height=32).pack(pady=5)
+    button_frame = ctk.CTkFrame(form_container, fg_color="transparent")
+    button_frame.pack(pady=30)
+    
+    login_btn = ctk.CTkButton(button_frame, 
+                            text="Login", 
+                            font=('Aptos Black', 14),
+                            command=login,
+                            width=140,
+                            height=40,
+                            corner_radius=10,
+                            fg_color="#0078D7",
+                            hover_color="#005a9e")
+    login_btn.pack(side="left", padx=10)
+    
+    register_btn = ctk.CTkButton(button_frame, 
+                               text="Register", 
+                               font=('Aptos Black', 14),
+                               command=register,
+                               width=140,
+                               height=40,
+                               corner_radius=10,
+                               fg_color="#2b2b2b",
+                               border_color="#0078D7",
+                               border_width=2,
+                               hover_color="#3b3b3b")
+    register_btn.pack(side="left", padx=10)
 
 def clear_window(window):
     for widget in window.winfo_children():
@@ -208,30 +306,30 @@ def register():
     def register_user():
         username = reg_username_entry.get().strip()
         password = reg_password_entry.get()
-        email = reg_email_entry.get().strip()
+        confirm_password = reg_confirm_password_entry.get()
         
-        if not username or not password or not email:
+        if not username or not password or not confirm_password:
             messagebox.showerror("Error", "All fields are required.")
             return
             
-        if not validate_email(email):
-            messagebox.showerror("Error", "Invalid email format.")
+        if password != confirm_password:
+            messagebox.showerror("Error", "Passwords do not match.")
             return
 
         try:
             conn = sqlite3.connect("admin_accounts.db")
             cursor = conn.cursor()
             
-            # Check if username or email already exists
-            cursor.execute("SELECT * FROM admins WHERE username = ? OR email = ?", (username, email))
+            # Check if username already exists
+            cursor.execute("SELECT * FROM admins WHERE username = ?", (username,))
             if cursor.fetchone():
-                messagebox.showerror("Error", "Username or email already exists.")
+                messagebox.showerror("Error", "Username already exists.")
                 return
                 
             cursor.execute("""
-                INSERT INTO admins (username, password, email, last_login)
-                VALUES (?, ?, ?, datetime('now'))
-            """, (username, password, email))
+                INSERT INTO admins (username, password, last_login)
+                VALUES (?, ?, datetime('now'))
+            """, (username, password))
             
             conn.commit()
             messagebox.showinfo("Success", "Registration successful! Please log in.")
@@ -248,28 +346,53 @@ def register():
     reg_frame = ctk.CTkFrame(login_window)
     reg_frame.pack(pady=50, padx=50, fill="both", expand=True)
     
-    ctk.CTkLabel(reg_frame, text="Register Admin", font=('Aptos Black', 25)).pack(pady=(20, 30))
+    ctk.CTkLabel(reg_frame, 
+                text="Register Admin", 
+                font=('Aptos Black', 25)).pack(pady=(20, 30))
     
     # Username field
-    ctk.CTkLabel(reg_frame, text="Username", font=('Aptos Black', 14)).pack()
-    reg_username_entry = ctk.CTkEntry(reg_frame, width=200, font=('Aptos Black', 12))
+    ctk.CTkLabel(reg_frame, 
+                text="Username", 
+                font=('Aptos Black', 14)).pack()
+    reg_username_entry = ctk.CTkEntry(reg_frame, 
+                                    width=200, 
+                                    font=('Aptos Black', 12))
     reg_username_entry.pack(pady=5)
 
-    # Email field
-    ctk.CTkLabel(reg_frame, text="Email", font=('Aptos Black', 14)).pack()
-    reg_email_entry = ctk.CTkEntry(reg_frame, width=200, font=('Aptos Black', 12))
-    reg_email_entry.pack(pady=5)
-    
     # Password field
-    ctk.CTkLabel(reg_frame, text="Password", font=('Aptos Black', 14)).pack()
-    reg_password_entry = ctk.CTkEntry(reg_frame, show="*", width=200, font=('Aptos Black', 12))
+    ctk.CTkLabel(reg_frame, 
+                text="Password", 
+                font=('Aptos Black', 14)).pack()
+    reg_password_entry = ctk.CTkEntry(reg_frame, 
+                                    show="*", 
+                                    width=200, 
+                                    font=('Aptos Black', 12))
     reg_password_entry.pack(pady=5)
+    
+    # Confirm Password field
+    ctk.CTkLabel(reg_frame, 
+                text="Confirm Password", 
+                font=('Aptos Black', 14)).pack()
+    reg_confirm_password_entry = ctk.CTkEntry(reg_frame, 
+                                            show="*", 
+                                            width=200, 
+                                            font=('Aptos Black', 12))
+    reg_confirm_password_entry.pack(pady=5)
 
     # Buttons
-    ctk.CTkButton(reg_frame, text="Register", font=('Aptos Black', 12), 
-                 command=register_user, width=120, height=32).pack(pady=10)
-    ctk.CTkButton(reg_frame, text="Back to Login", font=('Aptos Black', 12), 
-                 command=load_login_form, width=120, height=32).pack(pady=5)
+    ctk.CTkButton(reg_frame, 
+                 text="Register", 
+                 font=('Aptos Black', 12),
+                 command=register_user, 
+                 width=120, 
+                 height=32).pack(pady=10)
+    
+    ctk.CTkButton(reg_frame, 
+                 text="Back to Login", 
+                 font=('Aptos Black', 12),
+                 command=load_login_form, 
+                 width=120, 
+                 height=32).pack(pady=5)
 
 # --- Login Verification ---
 def login():
@@ -285,23 +408,28 @@ def login():
         conn = sqlite3.connect("admin_accounts.db")
         cursor = conn.cursor()
         
-        # Check if account is locked
-        cursor.execute("SELECT failed_attempts, account_locked FROM admins WHERE username = ?", (username,))
-        result = cursor.fetchone()
+        # First check if the username exists
+        cursor.execute("SELECT * FROM admins WHERE username = ?", (username,))
+        account = cursor.fetchone()
         
-        if result and result[1]:  # Account is locked
+        if not account:
+            messagebox.showerror("Error", "Invalid username or password.")
+            return
+            
+        # Check if account is locked
+        if account[6]:  # account_locked field
             messagebox.showerror("Error", "Account is locked. Please contact administrator.")
             return
             
-        # Verify credentials
+        # Now verify the password
         cursor.execute("""
             SELECT * FROM admins 
             WHERE username = ? AND password = ? AND account_locked = 0
         """, (username, password))
         
-        account = cursor.fetchone()
+        login_successful = cursor.fetchone() is not None
         
-        if account:
+        if login_successful:
             # Reset failed attempts and update last login
             cursor.execute("""
                 UPDATE admins 
@@ -325,13 +453,15 @@ def login():
             # Check if account should be locked
             cursor.execute("SELECT failed_attempts FROM admins WHERE username = ?", (username,))
             attempts = cursor.fetchone()[0]
+            
             if attempts >= 3:
                 cursor.execute("UPDATE admins SET account_locked = 1 WHERE username = ?", (username,))
                 messagebox.showerror("Error", "Too many failed attempts. Account locked.")
             else:
-                messagebox.showerror("Error", f"Invalid credentials. {3-attempts} attempts remaining.")
+                messagebox.showerror("Error", f"Invalid username or password. {3-attempts} attempts remaining.")
                 
             conn.commit()
+            
     except sqlite3.Error as e:
         messagebox.showerror("Database Error", f"Error during login: {str(e)}")
     finally:
@@ -342,6 +472,56 @@ def login():
 def launch_main_app():
     """Launch the main invoice application with enhanced features"""
     invoice_list = []
+    
+    # Create main window with modern styling
+    main_window = ctk.CTk()
+    main_window.state("zoomed")
+    main_window.title("Invoice Generator")
+    
+    # Create main frame with modern styling
+    main_frame = ctk.CTkFrame(main_window, fg_color="transparent")
+    main_frame.pack(padx=20, pady=20, fill="both", expand=True)
+    
+    # Create header frame
+    header_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+    header_frame.pack(fill="x", pady=(0, 20))
+    
+    # Add title and user info
+    title_label = ctk.CTkLabel(header_frame,
+                              text="Invoice Generator",
+                              font=('Aptos Black', 24),
+                              text_color="#0078D7")
+    title_label.pack(side="left")
+    
+    user_label = ctk.CTkLabel(header_frame,
+                             text=f"Welcome, {logged_in_admin}",
+                             font=('Aptos', 14),
+                             text_color="#ffffff")
+    user_label.pack(side="right")
+    
+    # Create tabs with modern styling
+    tabview = ctk.CTkTabview(main_frame,
+                            fg_color="#2b2b2b",
+                            border_color="#0078D7",
+                            border_width=2,
+                            corner_radius=15)
+    tabview.pack(padx=20, pady=20, fill="both", expand=True)
+    
+    # Add tabs with custom styling
+    new_invoice_tab = tabview.add("New Invoice")
+    items_tab = tabview.add("Items Management")
+    search_tab = tabview.add("Invoice History & Search")
+    
+    # Configure tab styling
+    tabview.tab("New Invoice").grid_columnconfigure(0, weight=1)
+    tabview.tab("Items Management").grid_columnconfigure(0, weight=1)
+    tabview.tab("Invoice History & Search").grid_columnconfigure(0, weight=1)
+    
+    # Style the tab buttons
+    tabview._segmented_button.configure(font=('Aptos Black', 14),
+                                      selected_color="#0078D7",
+                                      unselected_color="#2b2b2b",
+                                      text_color=("white", "white"))
     
     def add_new_item():
         """Add a new item/service to the database"""
@@ -554,6 +734,14 @@ def launch_main_app():
         except sqlite3.Error as e:
             messagebox.showerror("Database Error", f"Error retrieving invoices: {str(e)}")
 
+    def clear_invoice_history():
+        """Clear the invoice history display"""
+        for item in search_tree.get_children():
+            search_tree.delete(item)
+        search_entry.delete(0, tk.END)
+        results_label.configure(text="Recent Invoices")
+        update_invoice_display()
+
     def search_invoices():
         """Trigger search and update display"""
         update_invoice_display()
@@ -583,10 +771,9 @@ def launch_main_app():
             
             # Calculate totals
             subtotal = sum(item[3] for item in invoice_list)
-            taxratepdf = tax_rate_entry.get()
-            tax_rate = float(tax_rate_entry.get() or 0) / 100
-            tax = round(subtotal * tax_rate, 2)
-            total = round(subtotal + tax, 2)
+            tax_rate = float(tax_rate_entry.get() or 0)
+            tax_amount = round(subtotal * (tax_rate / 100), 2)
+            total = round(subtotal + tax_amount, 2)
             
             # Save to database
             conn = sqlite3.connect("admin_accounts.db")
@@ -595,14 +782,18 @@ def launch_main_app():
             cursor.execute("""
                 INSERT INTO invoices (
                     invoice_number, customer_name, customer_email, customer_phone,
-                    total_amount, created_by, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    total_amount, tax_rate, tax_amount, subtotal,
+                    created_by, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 invoice_number,
                 f"{first_name} {last_name}",
                 email,
                 phone,
                 total,
+                tax_rate,
+                tax_amount,
+                subtotal,
                 logged_in_admin,
                 "Paid"
             ))
@@ -633,8 +824,8 @@ def launch_main_app():
                 "email": email,
                 "invoice_list": invoice_list,
                 "subtotal": subtotal,
-                "tax": tax,
-                "tax_rate": taxratepdf,
+                "tax": tax_amount,
+                "tax_rate": tax_rate,
                 "total": total,
                 "date": datetime.datetime.now().strftime("%Y-%m-%d")
             })
@@ -669,10 +860,10 @@ def launch_main_app():
             conn = sqlite3.connect("admin_accounts.db")
             cursor = conn.cursor()
             
-            # Get invoice details
+            # Get invoice details including tax information
             cursor.execute("""
                 SELECT i.invoice_number, i.customer_name, i.customer_email, i.customer_phone,
-                       i.date_created, i.total_amount
+                       i.date_created, i.total_amount, i.tax_rate, i.tax_amount, i.subtotal
                 FROM invoices i
                 WHERE i.invoice_number = ?
             """, (invoice_number,))
@@ -694,7 +885,7 @@ def launch_main_app():
             conn.close()
             
             # Create new window for invoice details
-            details_window = ctk.CTkToplevel(main_window)
+            details_window = ctk.CTkToplevel()
             details_window.title(f"Invoice Details - {invoice_number}")
             details_window.geometry("800x600")
             
@@ -716,8 +907,6 @@ def launch_main_app():
             ctk.CTkLabel(header_frame, text=f"Phone: {invoice_data[3]}", 
                         font=('Aptos Black', 14)).pack(pady=2)
             ctk.CTkLabel(header_frame, text=f"Date: {invoice_data[4]}", 
-                        font=('Aptos Black', 14)).pack(pady=2)
-            ctk.CTkLabel(header_frame, text=f"Total Amount: ${invoice_data[5]:.2f}", 
                         font=('Aptos Black', 14)).pack(pady=2)
             
             # Items frame
@@ -758,75 +947,137 @@ def launch_main_app():
                     f"${item[3]:.2f}"   # total
                 ))
             
-            # Total amount frame
-            total_frame = ctk.CTkFrame(main_frame)
-            total_frame.pack(fill="x", padx=10, pady=10)
+            # Totals Frame with tax information
+            totals_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+            totals_frame.pack(fill="x", pady=10, padx=10)
             
-            ctk.CTkLabel(total_frame, text=f"Total Amount: ${invoice_data[5]:.2f}", 
-                        font=('Aptos Black', 16)).pack(side="right", padx=10)
+            # Add tax information and totals
+            subtotal = invoice_data[8] if invoice_data[8] is not None else 0
+            tax_rate = invoice_data[6] if invoice_data[6] is not None else 0
+            tax_amount = invoice_data[7] if invoice_data[7] is not None else 0
+            total = invoice_data[5] if invoice_data[5] is not None else 0
+            
+            ctk.CTkLabel(totals_frame, 
+                        text=f"Subtotal: ${subtotal:.2f}",
+                        font=('Aptos', 14),
+                        text_color="#ffffff").pack(side="left", padx=10)
+            
+            ctk.CTkLabel(totals_frame, 
+                        text=f"Tax Rate: {tax_rate}%",
+                        font=('Aptos', 14),
+                        text_color="#ffffff").pack(side="left", padx=10)
+            
+            ctk.CTkLabel(totals_frame, 
+                        text=f"Tax Amount: ${tax_amount:.2f}",
+                        font=('Aptos', 14),
+                        text_color="#ffffff").pack(side="left", padx=10)
+            
+            ctk.CTkLabel(totals_frame, 
+                        text=f"Total: ${total:.2f}",
+                        font=('Aptos Black', 16),
+                        text_color="#0078D7").pack(side="left", padx=10)
             
         except sqlite3.Error as e:
             messagebox.showerror("Database Error", f"Error viewing invoice: {str(e)}")
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
-    # Create main window
-    main_window = ctk.CTk()
-    main_window.state("zoomed")
-    main_window.title("Invoice Generator")
-    
-    # Create main frame
-    main_frame = ctk.CTkFrame(main_window)
-    main_frame.pack(padx=20, pady=20, fill="both", expand=True)
-    
-    # Create tabs
-    tabview = ctk.CTkTabview(main_frame)
-    tabview.pack(padx=20, pady=20, fill="both", expand=True)
-    
-    # Add tabs
-    new_invoice_tab = tabview.add("New Invoice")
-    items_tab = tabview.add("Items Management")
-    search_tab = tabview.add("Invoice History & Search")
-
     # New Invoice Form
-    customer_frame = ctk.CTkFrame(new_invoice_tab)
+    customer_frame = ctk.CTkFrame(new_invoice_tab,
+                                fg_color="#2b2b2b",
+                                corner_radius=15)
     customer_frame.pack(padx=20, pady=20, fill="x")
     
-    # Customer Information
-    ctk.CTkLabel(customer_frame, text="Customer Information", font=('Aptos Black', 16)).pack(pady=10)
+    # Customer Information Header
+    ctk.CTkLabel(customer_frame, 
+                text="Customer Information", 
+                font=('Aptos Black', 18),
+                text_color="#0078D7").pack(pady=(20, 10))
+    
+    # Create a grid for customer information
+    info_grid = ctk.CTkFrame(customer_frame, fg_color="transparent")
+    info_grid.pack(padx=20, pady=10, fill="x")
     
     # First Name
-    ctk.CTkLabel(customer_frame, text="First Name").pack()
-    first_name_entry = ctk.CTkEntry(customer_frame)
-    first_name_entry.pack(pady=5)
+    ctk.CTkLabel(info_grid, 
+                text="First Name", 
+                font=('Aptos', 12),
+                text_color="#ffffff").grid(row=0, column=0, padx=10, pady=5, sticky="w")
+    first_name_entry = ctk.CTkEntry(info_grid,
+                                   width=200,
+                                   height=35,
+                                   font=('Aptos', 12),
+                                   corner_radius=8)
+    first_name_entry.grid(row=1, column=0, padx=10, pady=5)
     
     # Last Name
-    ctk.CTkLabel(customer_frame, text="Last Name").pack()
-    last_name_entry = ctk.CTkEntry(customer_frame)
-    last_name_entry.pack(pady=5)
+    ctk.CTkLabel(info_grid, 
+                text="Last Name", 
+                font=('Aptos', 12),
+                text_color="#ffffff").grid(row=0, column=1, padx=10, pady=5, sticky="w")
+    last_name_entry = ctk.CTkEntry(info_grid,
+                                  width=200,
+                                  height=35,
+                                  font=('Aptos', 12),
+                                  corner_radius=8)
+    last_name_entry.grid(row=1, column=1, padx=10, pady=5)
     
     # Phone
-    ctk.CTkLabel(customer_frame, text="Phone").pack()
-    phone_entry = ctk.CTkEntry(customer_frame)
-    phone_entry.pack(pady=5)
+    ctk.CTkLabel(info_grid, 
+                text="Phone", 
+                font=('Aptos', 12),
+                text_color="#ffffff").grid(row=2, column=0, padx=10, pady=5, sticky="w")
+    phone_entry = ctk.CTkEntry(info_grid,
+                              width=200,
+                              height=35,
+                              font=('Aptos', 12),
+                              corner_radius=8)
+    phone_entry.grid(row=3, column=0, padx=10, pady=5)
+
+    # Add phone number validation
+    def validate_phone_input(event=None):
+        value = phone_entry.get()
+        # Remove any non-digit characters
+        new_value = ''.join(filter(str.isdigit, value))
+        # If the value changed (had non-digits), update the entry
+        if new_value != value:
+            phone_entry.delete(0, tk.END)
+            phone_entry.insert(0, new_value)
+    
+    # Bind validation to key events
+    phone_entry.bind('<KeyRelease>', validate_phone_input)
     
     # Email
-    ctk.CTkLabel(customer_frame, text="Email").pack()
-    email_entry = ctk.CTkEntry(customer_frame)
-    email_entry.pack(pady=5)
+    ctk.CTkLabel(info_grid, 
+                text="Email", 
+                font=('Aptos', 12),
+                text_color="#ffffff").grid(row=2, column=1, padx=10, pady=5, sticky="w")
+    email_entry = ctk.CTkEntry(info_grid,
+                              width=200,
+                              height=35,
+                              font=('Aptos', 12),
+                              corner_radius=8)
+    email_entry.grid(row=3, column=1, padx=10, pady=5)
     
     # Tax Rate
-    ctk.CTkLabel(customer_frame, text="Tax Rate (%)").pack()
-    tax_rate_entry = ctk.CTkEntry(customer_frame)
+    ctk.CTkLabel(info_grid, 
+                text="Tax Rate (%)", 
+                font=('Aptos', 12),
+                text_color="#ffffff").grid(row=4, column=0, padx=10, pady=5, sticky="w")
+    tax_rate_entry = ctk.CTkEntry(info_grid,
+                                 width=200,
+                                 height=35,
+                                 font=('Aptos', 12),
+                                 corner_radius=8)
     tax_rate_entry.insert(0, "0")
-    tax_rate_entry.pack(pady=5)
+    tax_rate_entry.grid(row=5, column=0, padx=10, pady=5)
     
-    # Create a container frame for items and buttons
-    container_frame = ctk.CTkFrame(new_invoice_tab)
-    container_frame.pack(padx=20, pady=20, fill="both", expand=True)
+    # Create a container frame for items
+    items_container = ctk.CTkFrame(new_invoice_tab)
+    items_container.pack(padx=20, pady=20, fill="both", expand=True)
     
-    # Items Frame - now inside container_frame with limited expand
-    items_frame = ctk.CTkFrame(container_frame)
+    # Items Frame
+    items_frame = ctk.CTkFrame(items_container)
     items_frame.pack(padx=0, pady=(0, 10), fill="both", expand=True)
     
     ctk.CTkLabel(items_frame, text="Invoice Items", font=('Aptos Black', 16)).pack(pady=10)
@@ -843,8 +1094,8 @@ def launch_main_app():
     
     # Description
     ctk.CTkLabel(entry_frame, text="Description").pack(side="left", padx=5)
-    desc_entry = ctk.CTkEntry(entry_frame, width=200)
-    desc_entry.pack(side="left", padx=5)
+    desc_entry = ctk.CTkEntry(entry_frame)
+    desc_entry.pack(side="left", fill="x", expand=True, padx=5)
     
     # Price
     ctk.CTkLabel(entry_frame, text="Price").pack(side="left", padx=5)
@@ -853,30 +1104,35 @@ def launch_main_app():
     price_spinbox.pack(side="left", padx=5)
     
     # Add Item Button
-    ctk.CTkButton(entry_frame, text="Add Item", command=add_item).pack(side="left", padx=5)
+    add_item_btn = ctk.CTkButton(entry_frame, text="Add Item", command=add_item)
+    add_item_btn.pack(side="left", padx=5)
     
-    # Items Treeview
+    # Clear Button
+    clear_btn = ctk.CTkButton(entry_frame, text="Clear", command=clear_item)
+    clear_btn.pack(side="left", padx=5)
+    
+    # Create Treeview for items
     tree_frame = ctk.CTkFrame(items_frame)
     tree_frame.pack(fill="both", expand=True, pady=10)
-
+    
     columns = ('qty', 'desc', 'price', 'total')
     tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=10)
     
-    # Configure column headings and widths
-    tree.heading('qty', text='Qty', anchor='center')
-    tree.heading('desc', text='Description', anchor='center')
-    tree.heading('price', text='Unit Price', anchor='center')
-    tree.heading('total', text='Total', anchor='center')
+    # Configure columns
+    tree.heading('qty', text='Quantity')
+    tree.heading('desc', text='Description')
+    tree.heading('price', text='Unit Price')
+    tree.heading('total', text='Total')
     
-    # Set fixed column widths and alignments
-    tree.column('qty', width=100, minwidth=100, anchor='center', stretch=False)
-    tree.column('desc', width=400, minwidth=200, anchor='w', stretch=True)
-    tree.column('price', width=150, minwidth=150, anchor='center', stretch=False)
-    tree.column('total', width=150, minwidth=150, anchor='center', stretch=False)
+    tree.column('qty', width=100)
+    tree.column('desc', width=400)
+    tree.column('price', width=150)
+    tree.column('total', width=150)
     
     # Add scrollbars
     v_scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
     h_scrollbar = ttk.Scrollbar(tree_frame, orient="horizontal", command=tree.xview)
+    
     tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
     
     # Pack the treeview and scrollbars
@@ -885,81 +1141,122 @@ def launch_main_app():
     h_scrollbar.pack(side="bottom", fill="x")
     
     # Totals Frame
-    totals_frame = ctk.CTkFrame(items_frame)
+    totals_frame = ctk.CTkFrame(items_frame, fg_color="transparent")
     totals_frame.pack(fill="x", pady=10)
     
-    subtotal_label = ctk.CTkLabel(totals_frame, text="Subtotal: $0.00")
+    subtotal_label = ctk.CTkLabel(totals_frame, 
+                                 text="Subtotal: $0.00",
+                                 font=('Aptos', 14),
+                                 text_color="#ffffff")
     subtotal_label.pack(side="left", padx=10)
     
-    tax_label = ctk.CTkLabel(totals_frame, text="Tax: $0.00")
+    tax_label = ctk.CTkLabel(totals_frame, 
+                            text="Tax: $0.00",
+                            font=('Aptos', 14),
+                            text_color="#ffffff")
     tax_label.pack(side="left", padx=10)
     
-    total_label = ctk.CTkLabel(totals_frame, text="Total: $0.00")
+    total_label = ctk.CTkLabel(totals_frame, 
+                              text="Total: $0.00",
+                              font=('Aptos Black', 16),
+                              text_color="#0078D7")
     total_label.pack(side="left", padx=10)
     
-    # Buttons Frame - now inside container_frame
-    buttons_frame = ctk.CTkFrame(container_frame)
-    buttons_frame.pack(fill="x", pady=(0, 5))
+    # Add Generate Invoice Button directly in the items_frame
+    generate_invoice_btn = ctk.CTkButton(
+        items_frame,
+        text="Generate Invoice",
+        command=generate_invoice,
+        width=120,  # Match other button widths
+        height=32,  # Match other button heights
+        font=('Aptos Black', 12),  # Match other button fonts
+        corner_radius=8,  # Match other button corner radius
+        fg_color="#0078D7",
+        hover_color="#005a9e"
+    )
+    generate_invoice_btn.pack(pady=10, padx=20, anchor="w")  # Anchor west (left) and add padding
+
+    def on_enter(e):
+        generate_invoice_btn.configure(fg_color="#005a9e")
     
-    ctk.CTkButton(buttons_frame, text="Generate Invoice", command=generate_invoice).pack(side="left", padx=5)
-    ctk.CTkButton(buttons_frame, text="New Invoice", command=new_invoice).pack(side="left", padx=5)
+    def on_leave(e):
+        generate_invoice_btn.configure(fg_color="#0078D7")
+    
+    generate_invoice_btn.bind("<Enter>", on_enter)
+    generate_invoice_btn.bind("<Leave>", on_leave)
     
     # Search and History Tab
-    search_frame = ctk.CTkFrame(search_tab)
+    search_frame = ctk.CTkFrame(search_tab,
+                               fg_color="#2b2b2b",
+                               corner_radius=15)
     search_frame.pack(padx=20, pady=20, fill="both", expand=True)
     
-    # Search Section
-    search_section = ctk.CTkFrame(search_frame)
-    search_section.pack(fill="x", padx=20, pady=(0, 10))
+    # Search Section with modern styling
+    search_section = ctk.CTkFrame(search_frame, fg_color="transparent")
+    search_section.pack(fill="x", padx=20, pady=(20, 10))
     
-    # Search Entry and Button in same row
-    ctk.CTkLabel(search_section, text="Search Invoices", font=('Aptos Black', 16)).pack(side="left", padx=(0, 10))
-    search_entry = ctk.CTkEntry(search_section, placeholder_text="Search by customer name", width=300)
+    # Search Entry and Button in same row with modern styling
+    ctk.CTkLabel(search_section, 
+                text="Search Invoices", 
+                font=('Aptos Black', 16),
+                text_color="#0078D7").pack(side="left", padx=(0, 10))
+    
+    search_entry = ctk.CTkEntry(search_section, 
+                               placeholder_text="Search by customer name",
+                               width=300,
+                               height=35,
+                               font=('Aptos', 12),
+                               corner_radius=8)
     search_entry.pack(side="left", padx=10)
     search_entry.bind('<Return>', lambda event: search_invoices())
     
-    def clear_invoice_history():
-        if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete all invoice history? This cannot be undone."):
-            try:
-                conn = sqlite3.connect("admin_accounts.db")
-                cursor = conn.cursor()
-                
-                # Delete from invoice_items first due to foreign key constraint
-                cursor.execute("DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices)")
-                cursor.execute("DELETE FROM invoices")
-                
-                conn.commit()
-                conn.close()
-                
-                # Refresh the display
-                update_invoice_display()
-                messagebox.showinfo("Success", "Invoice history has been cleared.")
-            except sqlite3.Error as e:
-                messagebox.showerror("Database Error", f"Error clearing history: {str(e)}")
+    # Search Button with modern styling
+    search_btn = ctk.CTkButton(search_section, 
+                              text="Search", 
+                              font=('Aptos Black', 12),
+                              command=search_invoices,
+                              width=100,
+                              height=35,
+                              corner_radius=8,
+                              fg_color="#0078D7",
+                              hover_color="#005a9e")
+    search_btn.pack(side="left", padx=10)
     
-    # Add Clear History button
-    clear_history_button = ctk.CTkButton(search_section, text="Clear History", 
-                                       command=clear_invoice_history,
-                                       fg_color="red", 
-                                       hover_color="#AA0000")
-    clear_history_button.pack(side="right", padx=10)
+    # Clear History Button with modern styling
+    clear_history_btn = ctk.CTkButton(search_section, 
+                                     text="Clear History", 
+                                     font=('Aptos Black', 12),
+                                     command=clear_invoice_history,
+                                     width=120,
+                                     height=35,
+                                     corner_radius=8,
+                                     fg_color="#dc3545",
+                                     hover_color="#c82333")
+    clear_history_btn.pack(side="right", padx=10)
     
-    # Results Section with Label
-    results_frame = ctk.CTkFrame(search_frame)
+    # Results Section with modern styling
+    results_frame = ctk.CTkFrame(search_frame, fg_color="transparent")
     results_frame.pack(fill="both", expand=True, padx=20, pady=10)
     
-    # Results Label
-    results_label = ctk.CTkLabel(results_frame, text="Recent Invoices", font=('Aptos Black', 14))
+    # Results Label with modern styling
+    results_label = ctk.CTkLabel(results_frame, 
+                               text="Recent Invoices", 
+                               font=('Aptos Black', 16),
+                               text_color="#0078D7")
     results_label.pack(pady=(0, 10))
     
-    # Treeview for results
-    tree_frame = ctk.CTkFrame(results_frame)
+    # Treeview for results with modern styling
+    tree_frame = ctk.CTkFrame(results_frame,
+                             fg_color="#2b2b2b",
+                             corner_radius=15)
     tree_frame.pack(fill="both", expand=True)
     
-    search_tree = ttk.Treeview(tree_frame, columns=('number', 'customer', 'date', 'total'), 
-                              show="headings", style="Custom.Treeview")
+    search_tree = ttk.Treeview(tree_frame, 
+                              columns=('number', 'customer', 'date', 'total'), 
+                              show="headings", 
+                              style="Custom.Treeview")
     
-    # Configure column headings and widths (keep existing configuration)
+    # Configure column headings and widths with modern styling
     search_tree.heading('number', text='Invoice Number', anchor='center')
     search_tree.heading('customer', text='Customer', anchor='center')
     search_tree.heading('date', text='Date', anchor='center')
@@ -970,109 +1267,211 @@ def launch_main_app():
     search_tree.column('date', width=200, anchor='center', stretch=False)
     search_tree.column('total', width=150, anchor='e', stretch=False)
     
-    # Add scrollbars
-    v_scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=search_tree.yview)
-    h_scrollbar = ttk.Scrollbar(tree_frame, orient="horizontal", command=search_tree.xview)
-    search_tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+    # Add scrollbars with modern styling
+    v_scrollbar = ttk.Scrollbar(tree_frame, 
+                               orient="vertical", 
+                               command=search_tree.yview)
+    h_scrollbar = ttk.Scrollbar(tree_frame, 
+                               orient="horizontal", 
+                               command=search_tree.xview)
+    search_tree.configure(yscrollcommand=v_scrollbar.set, 
+                         xscrollcommand=h_scrollbar.set)
     
     # Pack the treeview and scrollbars
     search_tree.pack(side="left", fill="both", expand=True)
     v_scrollbar.pack(side="right", fill="y")
     h_scrollbar.pack(side="bottom", fill="x")
     
-    # Configure row colors
-    search_tree.tag_configure('oddrow', background='#f0f0f0')
-    search_tree.tag_configure('evenrow', background='#ffffff')
+    # Configure row colors for better visibility
+    search_tree.tag_configure('oddrow', background='#2b2b2b', foreground='white')
+    search_tree.tag_configure('evenrow', background='#1e1e1e', foreground='white')
 
     # Bind double-click event to search tree
     search_tree.bind('<Double-1>', view_invoice_details)
 
     # Items Management Tab
-    items_frame = ctk.CTkFrame(items_tab)
+    items_frame = ctk.CTkFrame(items_tab,
+                              fg_color="#2b2b2b",
+                              corner_radius=15)
     items_frame.pack(padx=20, pady=20, fill="both", expand=True)
     
-    # New Item Form
-    new_item_frame = ctk.CTkFrame(items_frame)
-    new_item_frame.pack(fill="x", padx=20, pady=10)
-    
-    ctk.CTkLabel(new_item_frame, text="Add New Item/Service", font=('Aptos Black', 16)).pack(pady=(10,5))
+    # New Item Form Header
+    ctk.CTkLabel(items_frame, 
+                text="Add New Item/Service", 
+                font=('Aptos Black', 18),
+                text_color="#0078D7").pack(pady=(20, 10))
     
     # Create a more compact form layout
-    form_frame = ctk.CTkFrame(new_item_frame)
+    form_frame = ctk.CTkFrame(items_frame, fg_color="transparent")
     form_frame.pack(fill="x", padx=20, pady=5)
     
     # Create two columns for the form
-    left_form = ctk.CTkFrame(form_frame)
+    left_form = ctk.CTkFrame(form_frame, fg_color="transparent")
     left_form.pack(side="left", fill="x", expand=True, padx=(0,10))
-    right_form = ctk.CTkFrame(form_frame)
+    right_form = ctk.CTkFrame(form_frame, fg_color="transparent")
     right_form.pack(side="left", fill="x", expand=True, padx=(10,0))
     
     # Left column - Name and Price
-    name_frame = ctk.CTkFrame(left_form)
+    name_frame = ctk.CTkFrame(left_form, fg_color="transparent")
     name_frame.pack(fill="x", pady=2)
-    ctk.CTkLabel(name_frame, text="Name:", width=60).pack(side="left", padx=5)
-    new_item_name = ctk.CTkEntry(name_frame, height=32)
+    ctk.CTkLabel(name_frame, 
+                text="Name:", 
+                font=('Aptos', 12),
+                text_color="#ffffff",
+                width=60).pack(side="left", padx=5)
+    new_item_name = ctk.CTkEntry(name_frame, 
+                                height=35,
+                                font=('Aptos', 12),
+                                corner_radius=8)
     new_item_name.pack(side="left", fill="x", expand=True, padx=5)
     
-    price_frame = ctk.CTkFrame(left_form)
+    price_frame = ctk.CTkFrame(left_form, fg_color="transparent")
     price_frame.pack(fill="x", pady=2)
-    ctk.CTkLabel(price_frame, text="Price:", width=60).pack(side="left", padx=5)
-    new_item_price = ctk.CTkEntry(price_frame, height=32)
+    ctk.CTkLabel(price_frame, 
+                text="Price:", 
+                font=('Aptos', 12),
+                text_color="#ffffff",
+                width=60).pack(side="left", padx=5)
+    new_item_price = ctk.CTkEntry(price_frame, 
+                                 height=35,
+                                 font=('Aptos', 12),
+                                 corner_radius=8)
     new_item_price.pack(side="left", fill="x", expand=True, padx=5)
     
     # Right column - Description and Category
-    desc_frame = ctk.CTkFrame(right_form)
+    desc_frame = ctk.CTkFrame(right_form, fg_color="transparent")
     desc_frame.pack(fill="x", pady=2)
-    ctk.CTkLabel(desc_frame, text="Desc:", width=60).pack(side="left", padx=5)
-    new_item_desc = ctk.CTkEntry(desc_frame, height=32)
+    ctk.CTkLabel(desc_frame, 
+                text="Desc:", 
+                font=('Aptos', 12),
+                text_color="#ffffff",
+                width=60).pack(side="left", padx=5)
+    new_item_desc = ctk.CTkEntry(desc_frame, 
+                                height=35,
+                                font=('Aptos', 12),
+                                corner_radius=8)
     new_item_desc.pack(side="left", fill="x", expand=True, padx=5)
     
-    category_frame = ctk.CTkFrame(right_form)
+    category_frame = ctk.CTkFrame(right_form, fg_color="transparent")
     category_frame.pack(fill="x", pady=2)
-    ctk.CTkLabel(category_frame, text="Category:", width=60).pack(side="left", padx=5)
-    new_item_category = ctk.CTkEntry(category_frame, height=32)
+    ctk.CTkLabel(category_frame, 
+                text="Category:", 
+                font=('Aptos', 12),
+                text_color="#ffffff",
+                width=60).pack(side="left", padx=5)
+    new_item_category = ctk.CTkEntry(category_frame, 
+                                    height=35,
+                                    font=('Aptos', 12),
+                                    corner_radius=8)
     new_item_category.pack(side="left", fill="x", expand=True, padx=5)
     
-    # Add Button in a separate frame
-    button_container = ctk.CTkFrame(new_item_frame)
-    button_container.pack(fill="x", pady=(5,10))
-    ctk.CTkButton(button_container, text="Add Item", command=add_new_item, width=120, height=32).pack(pady=5)
+    # Add Button with modern styling
+    button_frame = ctk.CTkFrame(items_frame, fg_color="transparent")
+    button_frame.pack(fill="x", padx=20, pady=10)
     
-    # Items List
-    list_frame = ctk.CTkFrame(items_frame)
+    # Add Item Button
+    add_item_button = ctk.CTkButton(button_frame, 
+                                   text="Add Item", 
+                                   font=('Aptos Black', 14),
+                                   command=add_new_item,
+                                   width=150,
+                                   height=40,
+                                   corner_radius=10,
+                                   fg_color="#0078D7",
+                                   hover_color="#005a9e")
+    add_item_button.pack(side="left", padx=5)
+    
+    # Add to Invoice Button
+    add_to_invoice_btn = ctk.CTkButton(button_frame, 
+                                      text="Add to Invoice", 
+                                      font=('Aptos Black', 14),
+                                      command=add_item_to_invoice,
+                                      width=150,
+                                      height=40,
+                                      corner_radius=10,
+                                      fg_color="#0078D7",
+                                      hover_color="#005a9e")
+    add_to_invoice_btn.pack(side="left", padx=5)
+    
+    # Delete Item Button
+    delete_item_btn = ctk.CTkButton(button_frame, 
+                                   text="Delete Item", 
+                                   font=('Aptos Black', 14),
+                                   command=delete_item,
+                                   width=150,
+                                   height=40,
+                                   corner_radius=10,
+                                   fg_color="#dc3545",
+                                   hover_color="#c82333")
+    delete_item_btn.pack(side="left", padx=5)
+    
+    # Add hover effects
+    def on_enter_add_item(e):
+        add_item_button.configure(fg_color="#005a9e")
+    
+    def on_leave_add_item(e):
+        add_item_button.configure(fg_color="#0078D7")
+    
+    def on_enter_add_to_invoice(e):
+        add_to_invoice_btn.configure(fg_color="#005a9e")
+    
+    def on_leave_add_to_invoice(e):
+        add_to_invoice_btn.configure(fg_color="#0078D7")
+    
+    def on_enter_delete(e):
+        delete_item_btn.configure(fg_color="#c82333")
+    
+    def on_leave_delete(e):
+        delete_item_btn.configure(fg_color="#dc3545")
+    
+    add_item_button.bind("<Enter>", on_enter_add_item)
+    add_item_button.bind("<Leave>", on_leave_add_item)
+    add_to_invoice_btn.bind("<Enter>", on_enter_add_to_invoice)
+    add_to_invoice_btn.bind("<Leave>", on_leave_add_to_invoice)
+    delete_item_btn.bind("<Enter>", on_enter_delete)
+    delete_item_btn.bind("<Leave>", on_leave_delete)
+    
+    # Items List with modern styling
+    list_frame = ctk.CTkFrame(items_frame,
+                             fg_color="#2b2b2b",
+                             corner_radius=15)
     list_frame.pack(fill="both", expand=True, padx=20, pady=10)
     
-    # Create Treeview with reordered columns
-    items_tree = ttk.Treeview(list_frame, columns=('name', 'description', 'price', 'category'),
-                             show="headings", style="Treeview")
+    # Create Treeview with modern styling
+    items_tree = ttk.Treeview(list_frame, 
+                             columns=('name', 'description', 'price', 'category'),
+                             show="headings", 
+                             style="Treeview")
     
-    # Configure columns with category at the end
+    # Configure alternating row colors for items tree
+    items_tree.tag_configure('oddrow', background='#2b2b2b', foreground='white')
+    items_tree.tag_configure('evenrow', background='#1e1e1e', foreground='white')
+    
+    # Configure columns with modern styling
     items_tree.heading('name', text='Name', anchor='w')
     items_tree.heading('description', text='Description', anchor='w')
     items_tree.heading('price', text='Price', anchor='e')
-    items_tree.heading('category', text='Category', anchor='e')  # Changed to right alignment
+    items_tree.heading('category', text='Category', anchor='e')
     
     items_tree.column('name', width=200, anchor='w')
     items_tree.column('description', width=400, anchor='w')
     items_tree.column('price', width=100, anchor='e')
-    items_tree.column('category', width=150, anchor='e')  # Changed to right alignment
+    items_tree.column('category', width=150, anchor='e')
     
-    # Add scrollbars
-    v_scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=items_tree.yview)
-    h_scrollbar = ttk.Scrollbar(list_frame, orient="horizontal", command=items_tree.xview)
-    items_tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+    # Add scrollbars with modern styling
+    v_scrollbar = ttk.Scrollbar(list_frame, 
+                               orient="vertical", 
+                               command=items_tree.yview)
+    h_scrollbar = ttk.Scrollbar(list_frame, 
+                               orient="horizontal", 
+                               command=items_tree.xview)
+    items_tree.configure(yscrollcommand=v_scrollbar.set, 
+                        xscrollcommand=h_scrollbar.set)
     
     # Pack the treeview and scrollbars
     items_tree.pack(side="left", fill="both", expand=True)
     v_scrollbar.pack(side="right", fill="y")
     h_scrollbar.pack(side="bottom", fill="x")
-    
-    # Button Frame
-    button_frame = ctk.CTkFrame(items_frame)
-    button_frame.pack(fill="x", padx=20, pady=10)
-    
-    ctk.CTkButton(button_frame, text="Add to Invoice", command=add_item_to_invoice, width=120, height=32).pack(side="left", padx=5)
-    ctk.CTkButton(button_frame, text="Delete Item", command=delete_item, width=120, height=32).pack(side="left", padx=5)
     
     # Load existing items
     load_items()
